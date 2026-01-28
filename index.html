@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Movie Library</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #0c0c0c; color: white; padding: 20px; margin: 0; }
+        h1 { text-align: center; color: #e50914; margin: 30px 0; font-size: 32px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            gap: 25px; max-width: 1400px; margin: 0 auto; 
+        }
+
+        .movie-card { 
+            background: #181818; border-radius: 10px; overflow: hidden; 
+            transition: all 0.3s ease; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #222;
+            cursor: pointer; text-decoration: none; color: white;
+            display: flex; flex-direction: column;
+        }
+
+        .movie-card:hover { 
+            transform: scale(1.05); 
+            box-shadow: 0 0 25px rgba(229, 9, 20, 0.6); 
+            border-color: #e50914; 
+        }
+
+        .movie-card img { width: 100%; height: 270px; object-fit: cover; background: #222; }
+        
+        .movie-card .title { 
+            padding: 12px; text-align: center; font-size: 13px; font-weight: 600; 
+            min-height: 45px; display: flex; align-items: center; justify-content: center; 
+        }
+
+
+        #status { text-align: center; color: #666; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<h1>🍿 My Cinema List</h1>
+<div id="status">Loading movies from file...</div>
+<div class="container" id="movie-grid"></div>
+
+<script>
+    const API_KEY = 'fa95ee2afb405f213dd02c7a1399d9c5'; 
+
+    async function loadMoviesFromFile() {
+        const grid = document.getElementById('movie-grid');
+        const status = document.getElementById('status');
+
+        try {
+            // 1. Читаємо текстовий файл
+            const response = await fetch('movies.txt');
+            const text = await response.text();
+            
+            // 2. Розбиваємо текст на масив (по рядках) і видаляємо пусті рядки
+            const titles = text.split('\n').map(t => t.trim()).filter(t => t.length > 0);
+            
+            status.innerText = `Found ${titles.length} movies. Fetching posters...`;
+
+            // 3. Шукаємо кожен фільм через API
+            for (const title of titles) {
+                try {
+                    const apiRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(title)}&language=en-US`);
+                    const data = await apiRes.json();
+                    
+                    const movie = data.results && data.results[0];
+                    
+                    if (movie) {
+                        const card = document.createElement('a');
+                        card.className = 'movie-card';
+                        card.href = `https://www.themoviedb.org/movie/${movie.id}`;
+                        card.target = "_blank";
+
+                        const posterPath = movie.poster_path 
+                            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
+                            : `https://via.placeholder.com/500x750?text=No+Poster`;
+
+                        card.innerHTML = `
+                            <img src="${posterPath}" alt="${title}">
+                            <div class="title">${movie.title}</div>
+                        `;
+                        grid.appendChild(card);
+                    }
+                } catch (err) {
+                    console.error("Error fetching movie:", title);
+                }
+            }
+            status.style.display = 'none'; 
+        } catch (error) {
+            status.innerText = "Error: Could not find movies.txt file!";
+            console.error(error);
+        }
+    }
+
+    loadMoviesFromFile();
+</script>
+</body>
+</html>
